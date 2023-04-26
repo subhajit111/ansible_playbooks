@@ -1,0 +1,10 @@
+---
+- name: user_creation playbook
+  hosts: all
+  become: true
+  vars:
+    user: subha
+  tasks:
+  - name: creating user
+    user:
+      name: "{{ user }}"

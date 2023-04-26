@@ -1,0 +1,11 @@
+---
+- name: clone a repo
+  hosts: all
+  become: true
+  vars_files:
+    - vault_key.yaml  
+  tasks:
+  - name: cloning a repo form subhajit111
+    git:
+      repo: https://subhajit111:{{ pass }}@github.com/subhajit111/ansible123.git
+      dest: /opt/ansible/

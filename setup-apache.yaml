@@ -1,0 +1,6 @@
+---
+- name: installing apache playbook
+  hosts: all
+  become: true
+  roles:
+    - setup-apache

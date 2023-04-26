@@ -1,0 +1,8 @@
+---
+- name: creating a file
+  hosts: all
+  tasks: 
+  - name: creating a file in servers
+    file:
+      path: /home/ansadmin/ansible
+      state: absent
