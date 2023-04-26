@@ -1,0 +1,242 @@
+ps -ef | grep <servicename>
+
+COMPONENTS IN ANSIBLE --------------------------------------------------------------------
+
+Inventory: stores the managed nodes info
+	     info about all the managed nodes or servers which are manages by control node
+
+Playbooks: stores the list of tasks to be executed in the nodes
+
+Modules: used by ansibe playbooks and most used ones are already installed by ansible
+------------------------------------------------------------------------------------------
+
+ANSIBLE TERMINOLOGY
+
+Control node: any machine with ansible installed
+
+Managed nodes: the network devices you mange wiht Ansible
+
+Tasks: the unit of action in ansible
+
+--------------------------------------------------------------------------------------
+- go to sudo user : sudo su -
+- created a hostname : vi /etc/hostname, then change the content to anyname 
+- created a user : adduser ansadmin
+- gave the user a password : passwd ansadmin
+- added it to the sudor file : visudo, added the user wiht ALL and ALL access
+- logged in as the user : sudo su - ansadmin
+- created a sshkey : shh-keygen
+- checked the key : cd /etc/shh
+- enabled the password authentication : vi /etc/ssh/sshd_config, changed the
+  PasswordAuthentication Yes   
+- installed python and pip
+- installed ansible
+- created a ansible folder : mkdir /etc/ansible
+- created ansible configuration file - vi ansible.cfg
+- created hosts folder - touch hosts
+
+- create a rhel-manged-node and follow the previous steps but dont install ansible
+  and sshkey
+- copy the ip address of the rhel node : ip addr (copy the private ip - first one)
+- paste the ip address of the managed node in the hosts folder inside the control node
+  go to /etc/ansible, go to hosts : vi hosts
+- go to control node and switch user to ansadmin
+- copy the ssh-id : ssh-copy-id <private ip of the rhel>
+- if failed reload the rhel ssh service : service sshd reload in rhel-control-node
+- go to ansible-contol-node and try sshd-copy-ip again
+- after success, login to rhel from the control-node : ssh <ip of managed node>
+-------------------------------------------------------------------------------------------
+
+ansible all -m command -a "date"
+	   |		|	    |
+	   |		|   -a = atribute and "attribute name"
+         |        |  
+	   |	    module
+	   |
+the servers in host file
+-------------------------------------------------------------------------------------------
+
+ansible all -m yum -a "name=git" -b
+
+-------------------------------------------------------------------------------------------
+PLAYBOOK
+-------------------------------------------------------------------------------------------
+---                          		| -----> a playbook alz starts with '---'
+- name: <playbook name or tasks>
+  hosts: all                 		| -----> hosts will be in the /ansible/hosts file
+  become: true               		| -----> this enables the sudo 
+  tasks:			     		| -----> this is the task tab which use will specify
+  - name: creating user jhon		| -----> name of the task
+    user: name=<user_name>   		| -----> the kind of task and the attribute and its values
+
+-------------------------------------------------------------------------------------------
+to execute an ansible-playbook - ansible-plalybook <playbook_name.yaml>
+---------------------------------------------------------------------------------------------
+notify and handler       | ------> untill notify is satisfied it will not forward to the handler.
+					     if it is already installed then handler will not trigger
+					     nofify and handler.name shdoul be same
+--------------------------
+---
+- name: installing packages and starting services
+  hosts: all
+  become: true
+  tasks:
+    - name: installing packages
+      yum:
+        name: httpd
+        state: installed
+      notify: starting httpd/apache
+
+  handlers:
+    - name: starting httpd/apache
+      service:
+        name: httpd
+        state: started
+--------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------
+creation and use of variables
+------------------------------
+
+---
+- name: user_creation playbook
+  hosts: all
+  become: true
+  vars:
+    user: subha              ----------------> variable creation
+  tasks:
+  - name: creating user subha
+    user:
+      name: "{{ user }}"	---------------> calling the variable {{ }} - called flower braces
+
+--------------------------------------------------------------------------------------------------
+taking vars variable from external source
+------------------------------------------
+
+---
+- name: user_creation playbook
+  hosts: all
+  become: true
+  vars_files:
+    - user.yaml           ------------------>file name and i have created a file called user.yaml with input - user: subha
+  tasks:
+    - name: creating user
+      user:
+       name: "{{ user }}"
+--------------------------------
+or 
+using command prompt - ansible-playbook -i hosts <filename.yaml> --extra-vars "user:subha"
+---------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
+
+Tags, ignore_errors and shell commands to ansible
+--------------------------------------------------
+---
+- name: installing tomcat
+  hosts: all
+  become: true
+  tasks:
+  - name: tomcat installation
+    yum:
+      name: java
+      state: installed
+    
+  # tags: installing packages  ------> by using tags we can only execute those with tags
+  # ignore_errors: yes --------------> by ignore_error we can skip erros and continue with further tasks
+
+	
+  - name: download tomcat packages
+    get_url:
+      url: https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.74/bin/apache-tomcat-9.0.74.tar.gz
+      dest: /opt/
+
+  - name: unzip the files
+    unarchive:
+      src: /opt/apache-tomcat-9.0.74.tar.gz
+      dest: /opt
+      remote_src: yes
+
+  - name: adding permissio to the startup.sh file
+    file:
+      path: /opt/apache-tomcat-9.0.74/bin/startup.sh
+      mode: 0777
+
+  - name: running the command
+    shell: nohup ./startup.sh
+    args:
+      chdir: /opt/apache-tomcat-9.0.74/bin
+---------------------------------------------------------------------------------------------------------
+ANSIBLE-VAULT
+--------------
+to create a ansible-vault file - ansible-vault create <filename.yaml>
+to see the vault file - ansible-vault view <filename.yaml>
+to edit the vault file - ansible-vault edit <filename.yaml>
+to decrypt the vault file - ansible-vault decrypt <filename.yaml>
+to encrypt the vault file - ansible-vault encrypt <filename.yaml>
+
+---------------------------------------------------------------------------------------------------------
+clonning a private repo from github
+------------------------------------
+---
+- name: clone a repo
+  hosts: all
+  become: true
+  vars_files:
+    - vault-pass.yaml  ----------------------> holds the encrypted password(created using ansible-vault)
+  tasks:
+  - name: cloning a repo form subhajit111
+    git:
+      repo: https://subhajit111:{{ password }}@github.com/subhajit111/ansible123.git --------------> passing the vault pass input using varibales
+      dest: /opt/ansible/
+---------------------------------------------------------------------------------------------------------
+command - ansible-playbook -i hosts filename.yaml --ask-vault-pass
+or      - ansible-playbook -i hosts filename.yaml --vault-password-key keyfilename.yaml -----> here you save the password of the vaultkey in filename.yaml
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+								   |
+create role - ansible-galaxy init <rolename>	   |
+---------------------------------------------------
+---
+- name: installing apache playbook
+  hosts: all
+  become: true
+  roles:
+    - setup-apache   ------------> the role you created
+------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
